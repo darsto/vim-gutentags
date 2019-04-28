@@ -576,27 +576,26 @@ function! gutentags#default_io_cb(chan, msg) abort
 endfunction
 
 if has('nvim')
+    let g:on_exit_real_cb = ''
     " Neovim job API.
-    function! s:nvim_job_exit_wrapper(real_cb, job, exit_code, event_type) abort
-        call call(a:real_cb, [a:job, a:exit_code])
+    function! s:nvim_job_exit_wrapper(job, exit_code, event_type) abort
+        call call(g:on_exit_real_cb, [a:job, a:exit_code])
     endfunction
 
-    function! s:nvim_job_out_wrapper(real_cb, job, lines, event_type) abort
-        call call(a:real_cb, [a:job, a:lines])
+    function! s:nvim_job_out_wrapper(job, lines, event_type) abort
+        call call('gutentags#default_io_cb', [a:job, a:lines])
     endfunction
 
     function! gutentags#build_default_job_options(module) abort
        " Neovim kills jobs on exit, which is what we want.
+       let g:on_exit_real_cb = 'gutentags#'.a:module.'#on_job_exit'
        let l:job_opts = {
                 \'on_exit': function(
-                \    '<SID>nvim_job_exit_wrapper',
-                \    ['gutentags#'.a:module.'#on_job_exit']),
+                \    '<SID>nvim_job_exit_wrapper'),
                 \'on_stdout': function(
-                \    '<SID>nvim_job_out_wrapper',
-                \    ['gutentags#default_io_cb']),
+                \    '<SID>nvim_job_out_wrapper'),
                 \'on_stderr': function(
-                \    '<SID>nvim_job_out_wrapper',
-                \    ['gutentags#default_io_cb'])
+                \    '<SID>nvim_job_out_wrapper')
                 \}
        return l:job_opts
     endfunction
